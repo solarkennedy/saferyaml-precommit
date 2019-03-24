@@ -1,0 +1,2 @@
+ruamel.yaml==0.15.89
+strictyaml==1.0.0
