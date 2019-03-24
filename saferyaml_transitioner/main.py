@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 import sys
 from ruamel.yaml import YAML
+from ruamel.yaml.compat import StringIO
+
 import argparse
+import io
+
 
 def round_trip_lint_a_file(f):
     contents = f.read()
@@ -15,9 +19,13 @@ def round_trip_lint_a_file(f):
         return 1
 
 def round_trip_lint(contents):
+    stream = StringIO()
     yaml=YAML()
+    parsed = yaml.load(contents)
     yaml.default_flow_style = False
-    return yaml.dump({'a': [1, 2]}, s)
+    yaml.dump(parsed, stream)
+    stream.seek(0)
+    return stream
 
 
 def main(argv=None):
@@ -33,7 +41,7 @@ def main(argv=None):
                 if r != 0:
                     retval = 1
         except Exception as exc:
-            print(exc)
+            print(f"Exception while parsing {filename}: {exc}")
             retval = 1
     return retval
 
