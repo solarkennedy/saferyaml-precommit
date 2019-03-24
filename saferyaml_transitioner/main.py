@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import sys
 from ruamel.yaml import YAML
-from ruamel.yaml.compat import StringIO
 
 import argparse
 import io
@@ -19,13 +18,13 @@ def round_trip_lint_a_file(f):
         return 1
 
 def round_trip_lint(contents):
-    stream = StringIO()
+    stream = io.BytesIO()
     yaml=YAML()
     parsed = yaml.load(contents)
     yaml.default_flow_style = False
     yaml.dump(parsed, stream)
     stream.seek(0)
-    return stream
+    return stream.read()
 
 
 def main(argv=None):
