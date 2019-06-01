@@ -4,13 +4,15 @@ import json
 import hashlib
 import sys
 
-from yaml import load, dump
+import yaml as pyyaml
+
 try:
     from yaml import CLoader as Loader, CDumper as Dumper
 except ImportError:
     from yaml import Loader, Dumper
 
-import ruamel.yaml as yaml
+import ruamel.yaml
+
 
 
 class YAMLSemanticChangeError(Exception):
@@ -26,7 +28,7 @@ def md5_file(fd):
 def md5_yaml_data(fd):
     fd.seek(0)
     h =  hashlib.md5(
-        json.dumps(load(fd, Loader=Loader), sort_keys=True).encode('utf8'),
+        json.dumps(pyyaml.load(fd, Loader=Loader), sort_keys=True).encode('utf8'),
     ).hexdigest()
     return h
 
@@ -37,19 +39,21 @@ def make_yaml_file_safer(filename):
         hash_data_before = md5_yaml_data(fd)
         try:
             fd.seek(0)
-            data = yaml.round_trip_load(fd, preserve_quotes=True)
+            loader = ruamel.yaml.Loader
+            data = ruamel.yaml.load(fd, loader)
         except Exception as e:
             print(f"Failure loading {filename}: {e}")
-            return 2
+            raise
     
         fd.seek(0)
         fd.truncate()
-        yaml.round_trip_dump(data, fd, width=120, indent=2)
+        dumper = ruamel.yaml.RoundTripDumper
+        ruamel.yaml.dump(data, fd, Dumper=dumper, version=None, explicit_start=False)
 
         hash_data_after = md5_yaml_data(fd)
         hash_file_after = md5_file(fd)
         if hash_data_before != hash_data_after:
-            raise YAMLSemanticChangeError("The parsed yaml changed after rewriting it!!!")
+            raise YAMLSemanticChangeError("The parsed yaml changed after rewriting it!!! Check before and after manually.")
         return int(hash_file_before != hash_file_after)
 
 
