@@ -26,7 +26,7 @@ def test_fixes_stuff(input_yaml, expected_yaml, tmpdir, capsys):
 def test_is_idempotent(input_yaml, expected_yaml, tmpdir, capsys):
     path = tmpdir.join('input.yaml')
     path.write(input_yaml)
-    assert make_yaml_file_safer(path.strpath) == 0
+    assert make_yaml_file_safer(path.strpath) == 0, path.read()
     assert path.read() == expected_yaml
 
 

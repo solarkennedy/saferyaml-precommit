@@ -3,7 +3,6 @@ import argparse
 import json
 import hashlib
 import sys
-from pprint import pprint
 
 from yaml import load, dump
 try:
@@ -18,17 +17,27 @@ class YAMLSemanticChangeError(Exception):
     pass
 
 
+def md5_file(fd):
+    fd.seek(0)
+    h = hashlib.md5(fd.read().encode('utf8')).hexdigest()
+    return h
+
+
+def md5_yaml_data(fd):
+    fd.seek(0)
+    h =  hashlib.md5(
+        json.dumps(load(fd, Loader=Loader), sort_keys=True).encode('utf8'),
+    ).hexdigest()
+    return h
+
+
 def make_yaml_file_safer(filename):
     with open(filename, mode='r+') as fd:
-        before_hash = hashlib.md5(fd.read().encode('utf8')).hexdigest()
-        fd.seek(0)
-        before = hashlib.md5(
-            json.dumps(load(open(filename), Loader=Loader), sort_keys=True).encode('utf8'),
-        ).hexdigest()
+        hash_file_before = md5_file(fd)
+        hash_data_before = md5_yaml_data(fd)
         try:
-            data = yaml.round_trip_load(fd, preserve_quotes=True)
-            pprint(data)
             fd.seek(0)
+            data = yaml.round_trip_load(fd, preserve_quotes=True)
         except Exception as e:
             print(f"Failure loading {filename}: {e}")
             return 2
@@ -36,15 +45,12 @@ def make_yaml_file_safer(filename):
         fd.seek(0)
         fd.truncate()
         yaml.round_trip_dump(data, fd, width=120, indent=2)
-        fd.seek(0)
-        after = hashlib.md5(
-            json.dumps(load(open(filename), Loader=Loader), sort_keys=True).encode('utf8'),
-        ).hexdigest()
-        after_hash = hashlib.md5(fd.read().encode('utf8')).hexdigest()
-        if before != after:
-            raise YAMLSemanticChangeError("The parsed yaml changed after rewriting it!!!")
-        return int(before_hash != after_hash)
 
+        hash_data_after = md5_yaml_data(fd)
+        hash_file_after = md5_file(fd)
+        if hash_data_before != hash_data_after:
+            raise YAMLSemanticChangeError("The parsed yaml changed after rewriting it!!!")
+        return int(hash_file_before != hash_file_after)
 
 
 def main(argv=None):
